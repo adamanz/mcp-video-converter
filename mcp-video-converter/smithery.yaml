@@ -17,10 +17,6 @@ startCommand:
         default: "medium"
         title: "Default Quality"
         description: "Default quality setting for video conversion"
-  name: "MCP Video Converter"
-  description: "Convert video files between formats and check FFmpeg installation"
-  # Enable lazy loading to allow tool listing without full configuration
-  lazyConfig: true
   commandFunction: |
     (config) => {
       // Use uv to run Python without creating a virtual environment
@@ -29,7 +25,8 @@ startCommand:
       // Prepare environment variables
       const env = {
         ...process.env,
-        PYTHONPATH: process.cwd(),
+        // Set PYTHONPATH to the container's application directory
+        PYTHONPATH: "/app",
         // Set this to avoid FFmpeg slowness on first run
         MCP_SKIP_FFMPEG_CHECK_ON_INIT: "true"
       };
@@ -52,7 +49,9 @@ startCommand:
       return {
         command: "uv",
         args: ["run", "-m", "mcp_video_converter.server"],
-        env: env
+        env: env,
+        // Ensure server starts in the correct working directory
+        cwd: "/app"
       };
     }
 
@@ -60,18 +59,5 @@ startCommand:
 build:
   dockerfile: Dockerfile  # Path to Dockerfile relative to this file
   dockerBuildPath: .      # Docker build context relative to this file
-  # Environment variables to pass to the container
   env:
-    # Override the default output directory to use a volume-friendly path
     OUTPUT_DIRECTORY: "/data/converted"
-  # Options for the Docker build command
-  buildOptions:
-    # Add build arguments if needed
-    buildArgs:
-      PYTHON_VERSION: "3.10"
-      INSTALL_DEV: "false"
-    # Add labels for better container management
-    labels:
-      org.opencontainers.image.source: "https://github.com/adamanz/mcp-video-converter"
-      org.opencontainers.image.description: "MCP Server for video conversion using FFmpeg"
-      org.opencontainers.image.licenses: "MIT"

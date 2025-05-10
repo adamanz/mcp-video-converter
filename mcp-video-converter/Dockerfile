@@ -65,7 +65,8 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
   CMD python -c "import importlib.util; import sys; sys.exit(0 if importlib.util.find_spec('mcp_video_converter') else 1)"
 
 # Default command to run the server using uv
-ENTRYPOINT ["uv", "run", "-m", "mcp_video_converter.server"]
+# Command will be provided by smithery.yaml
+CMD ["uv", "run", "-m", "mcp_video_converter.server"]
 
 # Expose port for HTTP transport (if needed in the future)
 EXPOSE 8000
