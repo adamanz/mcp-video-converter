@@ -11,8 +11,9 @@ dependencies = [
 [project.scripts]
 mcp-video-converter = "mcp_video_converter.server:main_cli"
 
-[tool.uv.sources]
-"mcp-video-converter" = { editable = "." }
+# Removing the problematic section
+# [tool.uv.sources]
+# "mcp-video-converter" = { editable = true }
 
 [build-system]
 requires = ["hatchling"]
