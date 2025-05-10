@@ -38,10 +38,16 @@ An MCP server that provides tools for checking FFmpeg installation and convertin
    # Using pip
    pip install -e .
    pip install fastmcp
-   
+
    # Or using uv
    uv pip install -e .
    uv pip install fastmcp
+   ```
+
+4. Verify your installation:
+   ```bash
+   # Run the installation check script
+   python check_installation.py
    ```
 
 ## Running the Server Directly
@@ -179,7 +185,14 @@ To add this MCP server to Cursor:
 
 ## Deploying with Smithery
 
-Smithery is a tool that simplifies deploying and managing MCP servers. This project includes a `smithery.yaml` file for easy deployment.
+Smithery is a platform that simplifies deploying and managing MCP servers. This project is fully configured for Smithery deployment with the required files and configurations.
+
+### Required Configuration Files
+
+This project includes all required configuration files for Smithery deployment:
+
+1. **smithery.yaml**: Defines how to start your server and its configuration options
+2. **Dockerfile**: Defines how to build your server's container image
 
 ### Smithery YAML Configuration
 
@@ -204,11 +217,33 @@ startCommand:
         enum: ["low", "medium", "high"]
         default: "medium"
         title: "Default Quality"
+  name: "MCP Video Converter"
+  description: "Convert video files between formats and check FFmpeg installation"
   commandFunction: |
     (config) => {
-      // Function that returns command details based on configuration
+      // Function that returns command details based on configuration options
     }
+
+build:
+  dockerfile: Dockerfile
+  dockerBuildPath: .
+  env:
+    OUTPUT_DIRECTORY: "/data/converted"
+  buildOptions:
+    buildArgs:
+      PYTHON_VERSION: "3.10"
+      INSTALL_DEV: "false"
+    labels:
+      org.opencontainers.image.source: "https://github.com/adamanz/mcp-video-converter"
+      org.opencontainers.image.description: "MCP Server for video conversion using FFmpeg"
+      org.opencontainers.image.licenses: "MIT"
 ```
+
+Key components:
+- **type: stdio**: Defines that our server uses the standard I/O transport
+- **configSchema**: Defines the configuration options users can set (FFmpeg path, output directory, quality)
+- **commandFunction**: JavaScript function that returns how to start the server based on configuration
+- **build**: Container-specific configuration for Dockerized deployment
 
 ### Deploying to Smithery
 
@@ -227,16 +262,25 @@ startCommand:
    ```bash
    # Navigate to the repository directory
    cd /path/to/adamanz/mcp-video-converter
-   
+
    # Deploy to Smithery
    smithery deploy
+   ```
+
+   Alternatively, deploy with explicit build options:
+   ```bash
+   # Deploy with container build
+   smithery deploy --build
+
+   # Deploy with custom build arguments
+   smithery deploy --build --build-arg PYTHON_VERSION=3.11
    ```
 
 4. Configure and start the server in Smithery:
    ```bash
    # Configure the server (interactive)
    smithery configure mcp-video-converter
-   
+
    # Start the server
    smithery start mcp-video-converter
    ```
@@ -250,17 +294,7 @@ This project includes a multi-stage Dockerfile for efficient containerized deplo
 - Creates a dedicated volume mount point for converted files
 - Includes a healthcheck for better container monitoring
 
-Smithery can build and deploy the container for you:
-
-```bash
-# Deploy with container build
-smithery deploy --build
-
-# Deploy with custom build options
-smithery deploy --build --build-arg PYTHON_VERSION=3.11
-```
-
-You can also build and run the Docker container manually:
+You can build and run the Docker container manually:
 
 ```bash
 # Build the container
@@ -273,6 +307,15 @@ docker run -it --rm \
   -e DEFAULT_QUALITY=high \
   mcp-video-converter
 ```
+
+### Serverless Hosting Considerations
+
+When deploying to Smithery's serverless environment, be aware of the following:
+
+- **Connection Timeout**: Connections to your server will timeout after 2 minutes of inactivity
+- **Ephemeral Storage**: Design your server with ephemeral storage in mind
+- **Stateless Design**: The server should not rely on persistent local storage
+- **Output Files**: Video conversion outputs should be returned properly as part of the tool response to ensure clients can access them
 
 ### Smithery Management
 
@@ -299,9 +342,22 @@ Users can access your server through the Smithery app:
 1. Open the Smithery application
 2. Navigate to "Servers" tab
 3. Select "mcp-video-converter"
-4. Configure settings if prompted
+4. Configure settings if prompted (FFmpeg path, output directory, quality)
 5. Connect to the server
 6. Use the server with compatible MCP clients
+
+### Testing Before Deployment
+
+Before deploying to Smithery, it's recommended to test your server locally:
+
+```bash
+# Test with MCP Inspector (if available)
+mcp-inspector -s /path/to/mcp-video-converter/smithery.yaml
+
+# Or test by running the server directly
+cd /path/to/mcp-video-converter
+python -m mcp_video_converter.server
+```
 
 ## Troubleshooting Common Issues
 
@@ -390,4 +446,4 @@ This project is open source and available under the [MIT License](LICENSE).
 
 ## Contributing
 
-Contributions are welcome! Feel free to open issues or submit pull requests.
+Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for details on how to contribute to this project.
