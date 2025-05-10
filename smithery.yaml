@@ -47,8 +47,8 @@ startCommand:
       }
       
       return {
-        command: "uv",
-        args: ["run", "-m", "mcp_video_converter.server"],
+        command: "python",
+        args: ["-m", "mcp_video_converter.server"],
         // Ensure server starts in the correct working directory
         cwd: "/app",
         env: env

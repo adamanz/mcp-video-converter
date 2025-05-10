@@ -61,10 +61,8 @@ RUN mkdir -p /app/converted_videos && \
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
   CMD python -c "import importlib.util; import sys; sys.exit(0 if importlib.util.find_spec('mcp_video_converter') else 1)"
 
-# Default command to run the server
-ENTRYPOINT ["python", "-m", "mcp_video_converter.server"]
-# Uncomment the line below and comment the above line to use for debugging
-# ENTRYPOINT ["/bin/bash"]
+# Debug container with bash
+ENTRYPOINT ["/bin/bash"]
 
 # Expose port for HTTP transport (if needed in the future)
 EXPOSE 8000
