@@ -19,6 +19,8 @@ startCommand:
         description: "Default quality setting for video conversion"
   name: "MCP Video Converter"
   description: "Convert video files between formats and check FFmpeg installation"
+  # Enable lazy loading to allow tool listing without full configuration
+  lazyConfig: true
   commandFunction: |
     (config) => {
       // Base command to activate environment and run server

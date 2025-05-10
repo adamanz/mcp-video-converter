@@ -4,10 +4,11 @@ from typing import Dict, Any, Optional
 from fastmcp import FastMCP, Context
 from .tools import check_ffmpeg_installed_impl, convert_video_impl, get_supported_formats_impl
 
-# Create server instance
+# Create server instance with lazy_tool_config=True to support lazy loading of configurations
 mcp_video_server = FastMCP(
     name="VideoConverterServer",
-    instructions="A server for checking FFmpeg and converting videos between formats."
+    instructions="A server for checking FFmpeg and converting videos between formats.",
+    lazy_tool_config=True  # Enable lazy loading of configurations for tool scanning
 )
 
 # Register the FFmpeg check tool
