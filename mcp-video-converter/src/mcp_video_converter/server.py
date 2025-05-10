@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 from typing import Dict, Any, Optional
 
@@ -8,7 +9,9 @@ from .tools import check_ffmpeg_installed_impl, convert_video_impl, get_supporte
 mcp_video_server = FastMCP(
     name="VideoConverterServer",
     instructions="A server for checking FFmpeg and converting videos between formats.",
-    lazy_tool_config=True  # Enable lazy loading of configurations for tool scanning
+    lazy_tool_config=True,  # Enable lazy loading of configurations for tool scanning
+    # This helps Smithery to load faster by avoiding initialization tasks
+    skip_initialization=os.environ.get("MCP_SKIP_FFMPEG_CHECK_ON_INIT", "").lower() in ("true", "1", "yes")
 )
 
 # Register the FFmpeg check tool
@@ -63,6 +66,14 @@ async def get_supported_formats(ctx: Optional[Context] = None) -> Dict[str, Any]
 
 def main_cli():
     """Entry point for running the server via command line."""
+    import sys
+    
+    # Check if --http flag is passed
+    if "--http" in sys.argv:
+        print("HTTP mode is not supported in this version of the server")
+        print("Running in stdio mode instead")
+    
+    # Run in stdio mode
     mcp_video_server.run()
 
 if __name__ == "__main__":

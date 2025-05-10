@@ -3,13 +3,15 @@
 # Build stage
 FROM python:3.10-slim AS builder
 
-# Install build dependencies
+# Install build dependencies and uv
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     build-essential \
-    python3-dev && \
+    python3-dev \
+    curl && \
     apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
+    rm -rf /var/lib/apt/lists/* && \
+    curl -LsSf https://astral.sh/uv/install.sh | sh
 
 # Set up working directory
 WORKDIR /app
@@ -18,28 +20,29 @@ WORKDIR /app
 COPY pyproject.toml README.md LICENSE ./
 COPY src ./src/
 
-# Create virtual environment and install dependencies
-RUN python -m venv /venv && \
-    /venv/bin/pip install --no-cache-dir --upgrade pip setuptools wheel && \
-    /venv/bin/pip install --no-cache-dir -e . && \
-    /venv/bin/pip install --no-cache-dir fastmcp
+# Use uv to install dependencies
+RUN /root/.cargo/bin/uv pip install --no-cache-dir -e . && \
+    /root/.cargo/bin/uv pip install --no-cache-dir fastmcp
 
 # Runtime stage
 FROM python:3.10-slim
 
-# Install FFmpeg and runtime dependencies
+# Install FFmpeg, runtime dependencies and uv
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     ffmpeg \
-    ca-certificates && \
+    ca-certificates \
+    curl && \
     apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
+    rm -rf /var/lib/apt/lists/* && \
+    curl -LsSf https://astral.sh/uv/install.sh | sh
 
 # Set up working directory
 WORKDIR /app
 
-# Copy virtual environment from builder
-COPY --from=builder /venv /venv
+# Copy Python packages from builder
+COPY --from=builder /usr/local/lib/python3.10/site-packages /usr/local/lib/python3.10/site-packages
+COPY --from=builder /root/.cargo/bin/uv /usr/local/bin/uv
 
 # Copy source code
 COPY --from=builder /app /app
@@ -48,10 +51,10 @@ COPY --from=builder /app /app
 COPY tests ./tests/
 
 # Set environment variables
-ENV PATH="/venv/bin:$PATH" \
-    PYTHONPATH="/app" \
+ENV PYTHONPATH="/app" \
     PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1
+    PYTHONUNBUFFERED=1 \
+    PATH="/usr/local/bin:$PATH"
 
 # Create directory for converted videos
 RUN mkdir -p /app/converted_videos && \
@@ -61,8 +64,8 @@ RUN mkdir -p /app/converted_videos && \
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
   CMD python -c "import importlib.util; import sys; sys.exit(0 if importlib.util.find_spec('mcp_video_converter') else 1)"
 
-# Default command to run the server
-ENTRYPOINT ["/venv/bin/python", "-m", "mcp_video_converter.server"]
+# Default command to run the server using uv
+ENTRYPOINT ["uv", "run", "-m", "mcp_video_converter.server"]
 
 # Expose port for HTTP transport (if needed in the future)
 EXPOSE 8000

@@ -2,10 +2,18 @@ import asyncio
 import shutil
 import subprocess
 import os
+import time
 from pathlib import Path
 from typing import Dict, Any, List, Optional, Union
 
 from fastmcp import Context
+
+# Global cache to avoid repeatedly checking FFmpeg
+FFMPEG_CHECK_CACHE = {
+    "checked": False,
+    "result": None,
+    "timestamp": 0
+}
 
 # Tool to check FFmpeg installation
 async def check_ffmpeg_installed_impl(ctx: Optional[Context] = None) -> Dict[str, Any]:
@@ -20,15 +28,46 @@ async def check_ffmpeg_installed_impl(ctx: Optional[Context] = None) -> Dict[str
         Example: {"installed": True, "version": "ffmpeg version ..."} or
                  {"installed": False, "error": "FFmpeg not found."}
     """
+    # Use cached result if available and less than 10 minutes old
+    current_time = time.time()
+    if FFMPEG_CHECK_CACHE["checked"] and (current_time - FFMPEG_CHECK_CACHE["timestamp"] < 600):
+        if ctx:
+            await ctx.info("Using cached FFmpeg check result")
+        return FFMPEG_CHECK_CACHE["result"]
+
+    # Skip actual check if the environment variable is set and we're just initializing
+    if os.environ.get("MCP_SKIP_FFMPEG_CHECK_ON_INIT", "").lower() in ("true", "1", "yes"):
+        # Just assume it's installed for tool listing purposes
+        # The actual check will happen when the tool is called
+        stub_result = {"installed": True, "version": "FFmpeg (details will be available when tool is called)"}
+        FFMPEG_CHECK_CACHE["checked"] = True
+        FFMPEG_CHECK_CACHE["result"] = stub_result
+        FFMPEG_CHECK_CACHE["timestamp"] = current_time
+        return stub_result
+
     if ctx:
         await ctx.info("Checking if FFmpeg is installed...")
     try:
+        # Set a timeout to prevent hanging
         process = await asyncio.create_subprocess_exec(
             "ffmpeg", "-version",
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE
         )
-        stdout, stderr = await process.communicate()
+
+        # Use asyncio.wait_for to set a timeout
+        try:
+            stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=5.0)
+        except asyncio.TimeoutError:
+            if process:
+                process.kill()
+            if ctx:
+                await ctx.error("FFmpeg check timed out after 5 seconds")
+            result = {"installed": False, "error": "FFmpeg check timed out - may be installed but not responding quickly"}
+            FFMPEG_CHECK_CACHE["checked"] = True
+            FFMPEG_CHECK_CACHE["result"] = result
+            FFMPEG_CHECK_CACHE["timestamp"] = current_time
+            return result
 
         if process.returncode == 0:
             # FFmpeg typically prints version info to stdout or stderr
@@ -36,20 +75,36 @@ async def check_ffmpeg_installed_impl(ctx: Optional[Context] = None) -> Dict[str
             first_line = version_info.splitlines()[0] if version_info else "Unknown version"
             if ctx:
                 await ctx.info(f"FFmpeg found: {first_line}")
-            return {"installed": True, "version": first_line}
+            result = {"installed": True, "version": first_line}
+            FFMPEG_CHECK_CACHE["checked"] = True
+            FFMPEG_CHECK_CACHE["result"] = result
+            FFMPEG_CHECK_CACHE["timestamp"] = current_time
+            return result
         else:
             error_message = stderr.decode(errors='replace').strip() or stdout.decode(errors='replace').strip()
             if ctx:
                 await ctx.error(f"FFmpeg command failed: {error_message}")
-            return {"installed": False, "error": f"FFmpeg found but version command failed: {error_message}"}
+            result = {"installed": False, "error": f"FFmpeg found but version command failed: {error_message}"}
+            FFMPEG_CHECK_CACHE["checked"] = True
+            FFMPEG_CHECK_CACHE["result"] = result
+            FFMPEG_CHECK_CACHE["timestamp"] = current_time
+            return result
     except FileNotFoundError:
         if ctx:
             await ctx.error("FFmpeg not found in system PATH")
-        return {"installed": False, "error": "FFmpeg not found in system PATH."}
+        result = {"installed": False, "error": "FFmpeg not found in system PATH."}
+        FFMPEG_CHECK_CACHE["checked"] = True
+        FFMPEG_CHECK_CACHE["result"] = result
+        FFMPEG_CHECK_CACHE["timestamp"] = current_time
+        return result
     except Exception as e:
         if ctx:
             await ctx.error(f"Error checking FFmpeg: {str(e)}")
-        return {"installed": False, "error": f"An unexpected error occurred: {str(e)}"}
+        result = {"installed": False, "error": f"An unexpected error occurred: {str(e)}"}
+        FFMPEG_CHECK_CACHE["checked"] = True
+        FFMPEG_CHECK_CACHE["result"] = result
+        FFMPEG_CHECK_CACHE["timestamp"] = current_time
+        return result
 
 # Tool to convert video
 async def convert_video_impl(

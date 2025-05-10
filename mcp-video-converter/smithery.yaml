@@ -23,13 +23,15 @@ startCommand:
   lazyConfig: true
   commandFunction: |
     (config) => {
-      // Base command to activate environment and run server
-      const baseCommand = "cd \"$(dirname \"$0\")\" && python -m venv .venv && source .venv/bin/activate && pip install -e . && pip install fastmcp && python -m mcp_video_converter.server";
+      // Use uv to run Python without creating a virtual environment
+      // This is faster and more reliable than the bash approach
       
       // Prepare environment variables
       const env = {
         ...process.env,
         PYTHONPATH: process.cwd(),
+        // Set this to avoid FFmpeg slowness on first run
+        MCP_SKIP_FFMPEG_CHECK_ON_INIT: "true"
       };
       
       // Add FFmpeg path if provided
@@ -48,8 +50,8 @@ startCommand:
       }
       
       return {
-        command: "/bin/bash",
-        args: ["-c", baseCommand],
+        command: "uv",
+        args: ["run", "-m", "mcp_video_converter.server"],
         env: env
       };
     }
