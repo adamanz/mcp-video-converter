@@ -18,7 +18,7 @@ An MCP server that provides tools for checking FFmpeg installation and convertin
 
 1. Clone this repository:
    ```bash
-   git clone https://github.com/your-username/mcp-video-converter.git
+   git clone https://github.com/adamanz/mcp-video-converter.git
    cd mcp-video-converter
    ```
 
@@ -176,6 +176,132 @@ To add this MCP server to Cursor:
    - Always use absolute paths in your configuration
    - Make sure FFmpeg is installed and in your PATH
    - Logs may be accessed through Cursor's developer tools
+
+## Deploying with Smithery
+
+Smithery is a tool that simplifies deploying and managing MCP servers. This project includes a `smithery.yaml` file for easy deployment.
+
+### Smithery YAML Configuration
+
+The `smithery.yaml` file provides Smithery with instructions on how to run your server:
+
+```yaml
+startCommand:
+  type: stdio
+  configSchema:
+    type: object
+    properties:
+      ffmpegPath:
+        type: string
+        title: "FFmpeg Path"
+        description: "Optional path to FFmpeg executable (uses system PATH by default)"
+      outputDirectory:
+        type: string
+        title: "Output Directory"
+        description: "Optional custom directory for output files"
+      quality:
+        type: string
+        enum: ["low", "medium", "high"]
+        default: "medium"
+        title: "Default Quality"
+  commandFunction: |
+    (config) => {
+      // Function that returns command details based on configuration
+    }
+```
+
+### Deploying to Smithery
+
+1. Install Smithery CLI if you haven't already:
+   ```bash
+   # Install the Smithery command-line tool
+   npm install -g @smithery/cli
+   ```
+
+2. Login to Smithery:
+   ```bash
+   smithery login
+   ```
+
+3. Deploy directly from the repository:
+   ```bash
+   # Navigate to the repository directory
+   cd /path/to/adamanz/mcp-video-converter
+   
+   # Deploy to Smithery
+   smithery deploy
+   ```
+
+4. Configure and start the server in Smithery:
+   ```bash
+   # Configure the server (interactive)
+   smithery configure mcp-video-converter
+   
+   # Start the server
+   smithery start mcp-video-converter
+   ```
+
+### Docker Support
+
+This project includes a multi-stage Dockerfile for efficient containerized deployment. The container:
+
+- Uses a multi-stage build process to reduce final image size
+- Installs FFmpeg and all required dependencies
+- Creates a dedicated volume mount point for converted files
+- Includes a healthcheck for better container monitoring
+
+Smithery can build and deploy the container for you:
+
+```bash
+# Deploy with container build
+smithery deploy --build
+
+# Deploy with custom build options
+smithery deploy --build --build-arg PYTHON_VERSION=3.11
+```
+
+You can also build and run the Docker container manually:
+
+```bash
+# Build the container
+docker build -t mcp-video-converter .
+
+# Run the container
+docker run -it --rm \
+  -v $(pwd)/converted:/data/converted \
+  -e FFMPEG_PATH=/usr/bin/ffmpeg \
+  -e DEFAULT_QUALITY=high \
+  mcp-video-converter
+```
+
+### Smithery Management
+
+Useful Smithery commands for managing your deployment:
+
+```bash
+# View server logs
+smithery logs mcp-video-converter
+
+# Update to latest version
+smithery update mcp-video-converter
+
+# Stop the server
+smithery stop mcp-video-converter
+
+# Remove the server
+smithery remove mcp-video-converter
+```
+
+### Integrating with Smithery Apps
+
+Users can access your server through the Smithery app:
+
+1. Open the Smithery application
+2. Navigate to "Servers" tab
+3. Select "mcp-video-converter"
+4. Configure settings if prompted
+5. Connect to the server
+6. Use the server with compatible MCP clients
 
 ## Troubleshooting Common Issues
 

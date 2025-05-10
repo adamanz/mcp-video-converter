@@ -1,0 +1,73 @@
+startCommand:
+  type: stdio
+  configSchema:
+    type: object
+    properties:
+      ffmpegPath:
+        type: string
+        title: "FFmpeg Path"
+        description: "Optional path to FFmpeg executable (uses system PATH by default)"
+      outputDirectory:
+        type: string
+        title: "Output Directory"
+        description: "Optional custom directory for output files (defaults to creating a 'converted_videos' folder)"
+      quality:
+        type: string
+        enum: ["low", "medium", "high"]
+        default: "medium"
+        title: "Default Quality"
+        description: "Default quality setting for video conversion"
+  name: "MCP Video Converter"
+  description: "Convert video files between formats and check FFmpeg installation"
+  commandFunction: |
+    (config) => {
+      // Base command to activate environment and run server
+      const baseCommand = "cd \"$(dirname \"$0\")\" && python -m venv .venv && source .venv/bin/activate && pip install -e . && pip install fastmcp && python -m mcp_video_converter.server";
+      
+      // Prepare environment variables
+      const env = {
+        ...process.env,
+        PYTHONPATH: process.cwd(),
+      };
+      
+      // Add FFmpeg path if provided
+      if (config.ffmpegPath) {
+        env.FFMPEG_PATH = config.ffmpegPath;
+      }
+      
+      // Add output directory if provided
+      if (config.outputDirectory) {
+        env.OUTPUT_DIRECTORY = config.outputDirectory;
+      }
+      
+      // Add default quality if provided
+      if (config.quality) {
+        env.DEFAULT_QUALITY = config.quality;
+      }
+      
+      return {
+        command: "/bin/bash",
+        args: ["-c", baseCommand],
+        env: env
+      };
+    }
+
+# Build configuration for containerization
+build:
+  dockerfile: Dockerfile  # Path to Dockerfile relative to this file
+  dockerBuildPath: .      # Docker build context relative to this file
+  # Environment variables to pass to the container
+  env:
+    # Override the default output directory to use a volume-friendly path
+    OUTPUT_DIRECTORY: "/data/converted"
+  # Options for the Docker build command
+  buildOptions:
+    # Add build arguments if needed
+    buildArgs:
+      PYTHON_VERSION: "3.10"
+      INSTALL_DEV: "false"
+    # Add labels for better container management
+    labels:
+      org.opencontainers.image.source: "https://github.com/adamanz/mcp-video-converter"
+      org.opencontainers.image.description: "MCP Server for video conversion using FFmpeg"
+      org.opencontainers.image.licenses: "MIT"
