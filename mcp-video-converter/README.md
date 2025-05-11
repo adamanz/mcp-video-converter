@@ -444,6 +444,16 @@ uv run pytest
 
 This project is open source and available under the [MIT License](LICENSE).
 
+## Contributors
+
+We would like to thank all contributors who have helped with this project, especially:
+
+- **jlowin**: Contributed to fastmcp integration and server optimization techniques.
+- **mk2112**: Implemented the core any-to-any video conversion capabilities.
+- **wonderwhy-er**: Added desktop commander support and improved CLI functionality.
+
+Special thanks to all the contributors in ai_docs who shared code examples, implementation techniques, and debugging suggestions that made this project possible.
+
 ## Contributing
 
 Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for details on how to contribute to this project.
