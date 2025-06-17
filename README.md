@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/adamanz-mcp-video-converter-badge.png)](https://mseep.ai/app/adamanz-mcp-video-converter)
+
 # MCP Video Converter Server
 
 An MCP server that provides tools for checking FFmpeg installation and converting video files between various formats.
